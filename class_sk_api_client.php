@@ -53,8 +53,8 @@ class SK_API
     public function __construct()
     {
 
-        $this->base_url = 'https://sk-api.satoshisplace.space/api/v1/';
-        $this->api_key = '####'; // YOUR API KEY. GET ONE AT https://sk-api.satoshisplace.space
+        $this->base_url = 'https://sk-api.org/api/v1/';
+        $this->api_key = '####'; // YOUR API KEY. GET ONE AT https://sk-api.org.space
         $this->cache_dir = '/cache'; // ABSOLUTE PATH TO CACHE DIR. MUST BE WRITABLE!
         $this->cache_time = 600; // STANDARD CACHE TIME IN SECONDS
         $this->image_cache_time = 31536000; // CACHE TIME FOR IMAGES IN SECONDS
@@ -119,7 +119,7 @@ class SK_API
      * @param string $url The URL to send the request to.
      * @return string The response content.
      */
-    private function get($url)
+    private function get($url,$http_options=array())
     {
 
         if ($this->is_cache_up2date($url)) {
@@ -138,6 +138,10 @@ class SK_API
                 "verify_peer_name" => $this->ssl,
             )
         );
+
+        foreach($http_options as $key => $value){
+            $options['http'][$key] = $value;
+        }
 
         $context  = stream_context_create($options);
 
@@ -310,4 +314,26 @@ class SK_API
     {
         return $this->get($this->base_url . 'btc-price/eur');
     }
+
+    /**
+     * Retrieves a list of Items belong to a loged in user.
+     *
+     * @return string The response content with published items.
+     */ 
+    public function get_user_items_by_tgid()
+    {
+        return $this->get($this->base_url . 'user/items');
+    }
+
+    /**
+     * Retrieves a list of Items belong to a user by id.
+     *
+     * @return string The response content with published and unpublished items.
+     */ 
+    public function get_user_items()
+    {
+        $http_options['UserAuthData'] = base64_encode(json_encode($_SESSION['auth_data']));
+        return $this->get($this->base_url . 'user/private/'.$_SESSION['id'].'/items',$http_options);
+    }
 }
+?>
