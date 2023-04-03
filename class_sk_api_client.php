@@ -53,9 +53,9 @@ class SK_API
     public function __construct()
     {
 
-        $this->base_url = 'https://sk-api.org/api/v1/';
-        $this->api_key = '####'; // YOUR API KEY. GET ONE AT https://sk-api.org.space
-        $this->cache_dir = '/cache'; // ABSOLUTE PATH TO CACHE DIR. MUST BE WRITABLE!
+        $this->base_url = API_PATH;
+        $this->api_key = API_KEY; // YOUR API KEY. GET ONE AT https://sk-api.org.space
+        $this->cache_dir = CACHE_DIR; // ABSOLUTE PATH TO CACHE DIR. MUST BE WRITABLE!
         $this->cache_time = 600; // STANDARD CACHE TIME IN SECONDS
         $this->image_cache_time = 31536000; // CACHE TIME FOR IMAGES IN SECONDS
         $this->profile_image_cache_time = 86400; // CACHE TIME FOR PROFILE IMAGES IN SECONDS
@@ -119,7 +119,7 @@ class SK_API
      * @param string $url The URL to send the request to.
      * @return string The response content.
      */
-    private function get($url,$http_options=array())
+    private function get($url,$user_auth_header = false)
     {
 
         if ($this->is_cache_up2date($url)) {
@@ -139,9 +139,10 @@ class SK_API
             )
         );
 
-        foreach($http_options as $key => $value){
-            $options['http'][$key] = $value;
+        if($user_auth_header == True){
+            $options['http']['header'] .= "\r\n" . 'UserAuthData:' . base64_encode(json_encode($_SESSION['auth_data']));
         }
+
 
         $context  = stream_context_create($options);
 
@@ -314,7 +315,35 @@ class SK_API
     {
         return $this->get($this->base_url . 'btc-price/eur');
     }
+    /**
+     * Retrieves a current BTC price in EUR.
+     *
+     * @return string The response content.
+     */ 
+    public function check_tg_user_auth($auth_data)
+    {
+        $url = $this->base_url . 'tg_auth';
 
+        $postdata = http_build_query($auth_data);
+
+        $opts = array('http' =>
+            array(
+                "method"  => "POST",
+                "header"  => "Content-type: application/x-www-form-urlencoded\r\n" .
+                             "Authorization: Bearer " . $this->api_key,
+                'content' => $postdata
+            ),
+            "ssl" => array(
+                "verify_peer" => $this->ssl,
+                "verify_peer_name" => $this->ssl,
+            )
+        );
+        
+    
+        $context = stream_context_create($opts);
+        return file_get_contents($url, false, $context);
+
+    }
     /**
      * Retrieves a list of Items belong to a loged in user.
      *
@@ -332,8 +361,8 @@ class SK_API
      */ 
     public function get_user_items()
     {
-        $http_options['UserAuthData'] = base64_encode(json_encode($_SESSION['auth_data']));
-        return $this->get($this->base_url . 'user/private/'.$_SESSION['id'].'/items',$http_options);
+        
+        return $this->get($this->base_url . 'user/private/'.$_SESSION['id'].'/items',$user_auth_header=True);
     }
 }
 ?>
